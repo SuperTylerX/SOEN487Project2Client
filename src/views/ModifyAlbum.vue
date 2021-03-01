@@ -1,0 +1,223 @@
+<template>
+	<Form :model="formItem" :label-width="80">
+		<FormItem label="ISRC">
+			<Input v-model="formItem.ISRC" placeholder="Enter isrc..."></Input>
+		</FormItem>
+
+		<FormItem label="Title">
+			<Input v-model="formItem.title" placeholder="Enter title..."></Input>
+		</FormItem>
+
+		<FormItem label="Year">
+			<Input v-model.number="formItem.year" placeholder="Enter year..."></Input>
+		</FormItem>
+
+		<FormItem label="Artist">
+			<Input v-model="formItem.artist" placeholder="Enter artist..."></Input>
+		</FormItem>
+
+		<FormItem label="Description">
+			<Input
+				v-model="formItem.description"
+				type="textarea"
+				:autosize="{ minRows: 2, maxRows: 5 }"
+				placeholder="Enter description..."
+			>
+			</Input>
+		</FormItem>
+
+		<FormItem label="Cover">
+			<div class="demo-upload-list" v-for="item in uploadList" :key="item.name">
+				<template v-if="item.status === 'finished'">
+					<img :src="item.url"/>
+					<div class="demo-upload-list-cover">
+						<Icon
+							type="ios-eye-outline"
+							@click.native="handleView(item.name)"
+						></Icon>
+						<Icon
+							type="ios-trash-outline"
+							@click.native="handleRemove(item)"
+						></Icon>
+					</div>
+				</template>
+				<template v-else>
+					<Progress
+						v-if="item.showProgress"
+						:percent="item.percentage"
+						hide-info
+					></Progress>
+				</template>
+			</div>
+			<Upload
+				ref="upload"
+				:show-upload-list="false"
+				:default-file-list="defaultList"
+				:on-success="handleSuccess"
+				:format="['jpg', 'jpeg', 'png']"
+				:max-size="2048"
+				:on-format-error="handleFormatError"
+				:on-exceeded-size="handleMaxSize"
+				:before-upload="handleBeforeUpload"
+				multiple
+				type="drag"
+				action="/api/service/image/upload"
+				style="display: inline-block;width:58px;"
+			>
+				<div style="width: 58px;height:58px;line-height: 58px;">
+					<Icon type="ios-camera" size="20"></Icon>
+				</div>
+			</Upload>
+			<Modal title="View Image" v-model="visible">
+				<img
+					:src="'/api/service/image/download?id=' + formItem.img.id"
+					v-if="visible"
+					style="width: 100%"
+				/>
+			</Modal>
+		</FormItem>
+
+		<FormItem>
+			<Button type="primary" @click="updateForm">Submit</Button>
+		</FormItem>
+
+
+	</Form>
+</template>
+
+<script>
+import axios from "axios";
+
+export default {
+	data() {
+		return {
+			formItem: {
+				ISRC: "",
+				title: "",
+				description: "",
+				year: undefined,
+				artist: "",
+				image: {
+					id: undefined
+				}
+			},
+			defaultList: [],
+			imgName: "",
+			visible: false,
+			uploadList: []
+		};
+	},
+	methods: {
+		handleView(name) {
+			this.imgName = name;
+			this.visible = true;
+		},
+		handleRemove(file) {
+			this.$store.dispatch("DELETEIMAGE", {id: file.name});
+			const fileList = this.$refs.upload.fileList;
+			fileList.splice(fileList.indexOf(file), 1);
+			this.uploadList = fileList;
+			this.formItem.img.id = undefined;
+		},
+		handleSuccess(res, file) {
+			if (res.status === 200) {
+				this.formItem.img.id = res.id;
+				file.url = "/api/service/image/download?id=" + res.id;
+				file.name = res.id;
+			}
+		},
+		handleFormatError(file) {
+			this.$Notice.warning({
+				title: "The file format is incorrect",
+				desc:
+					"File format of " +
+					file.name +
+					" is incorrect, please select jpg or png."
+			});
+		},
+		handleMaxSize(file) {
+			this.$Notice.warning({
+				title: "Exceeding file size limit",
+				desc: "File  " + file.name + " is too large, no more than 2M."
+			});
+		},
+		handleBeforeUpload() {
+			console.log(this.uploadList.length);
+			const check = this.uploadList.length === 0;
+			if (!check) {
+				this.$Notice.warning({
+					title: "Only can upload one image."
+				});
+			}
+			return check;
+		},
+		updateForm() {
+			this.$store.dispatch("UPDATEALBUM", {album: this.formItem});
+			this.$router.push("/albumTable");
+		}
+	},
+	async mounted() {
+		this.uploadList = this.$refs.upload.fileList;
+		const albumID = Number(this.$route.query.id);
+		const album = this.$store.state.tableData.filter(row => row.albumID === albumID)[0];
+		if (!album) {
+			const res = await axios.get("/api/service/album/search?albumID=" + albumID);
+			this.formItem = res.data[0];
+		} else {
+			this.formItem = album;
+		}
+		if (this.formItem.img.id) {
+			this.uploadList.push({
+				percentage: 100,
+				status: "finished",
+				name: this.formItem.img.id.toString(),
+				url: "/api/service/image/download?id=" + this.formItem.img.id
+			});
+		}
+
+	}
+};
+</script>
+
+<style lang="less">
+.demo-upload-list {
+	display: inline-block;
+	width: 60px;
+	height: 60px;
+	text-align: center;
+	line-height: 60px;
+	border: 1px solid transparent;
+	border-radius: 4px;
+	overflow: hidden;
+	background: #fff;
+	position: relative;
+	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+	margin-right: 4px;
+}
+
+.demo-upload-list img {
+	width: 100%;
+	height: 100%;
+}
+
+.demo-upload-list-cover {
+	display: none;
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	background: rgba(0, 0, 0, 0.6);
+}
+
+.demo-upload-list:hover .demo-upload-list-cover {
+	display: block;
+}
+
+.demo-upload-list-cover i {
+	color: #fff;
+	font-size: 20px;
+	cursor: pointer;
+	margin: 0 2px;
+}
+</style>
