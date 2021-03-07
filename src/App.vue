@@ -21,8 +21,7 @@ body, html {
 }
 
 .layout-nav {
-	width: 120px;
-	margin: 0 20px 0 auto;
+	float: right;
 }
 
 .layout-footer-center {
@@ -36,9 +35,11 @@ body, html {
 				<Menu mode="horizontal" theme="dark" active-name="1">
 					<div class="layout-logo">Album Management System</div>
 					<div class="layout-nav">
-						<MenuItem name="1">
-							<Icon type="ios-navigate"></Icon>
+						<MenuItem name="1" to="/albumTable">
 							Albums
+						</MenuItem>
+						<MenuItem name="1" to="/logTable">
+							Logs
 						</MenuItem>
 					</div>
 				</Menu>
