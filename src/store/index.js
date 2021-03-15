@@ -41,11 +41,11 @@ export default new Vuex.Store({
 				commit('DELETEALBUM', {albumID});
 			}
 		},
-		async SUBMITFORM({commit}, payloads) {
+		async SUBMITFORM({dispatch}, payloads) {
 			const album = payloads.album;
 			const res = await axios.post("api/service/album/create", album);
 			if (res.data.status === 200) {
-				commit('LOADLOGS', {});
+				dispatch('LOADTABLEDATA', {});
 			}
 		},
 		async UPDATEALBUM({commit}, payloads) {
@@ -96,7 +96,7 @@ export default new Vuex.Store({
 			console.log(result.elements[0].elements[0].elements[0]);
 			const entries = [];
 
-			if (!resultArr){
+			if (!resultArr) {
 				commit('LOADLOGS', {result: []});
 				return;
 			}
